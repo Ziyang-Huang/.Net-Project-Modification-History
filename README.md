@@ -34,6 +34,15 @@ Optional but recommended on Windows:
 No pip installs required.
 
 ## Usage
+Note on PATH for examples:
+- The wrapper command names used below (proj-mod-hist-stats / ./proj-mod-hist-stats.sh) assume this project’s folder is on your PATH. If not, run them via full path or from the script’s folder.
+  - Windows: run with full path (e.g., `C:\...\.Net-Project-Modification-History\proj-mod-hist-stats.cmd ...`) or from that folder (`.\proj-mod-hist-stats ...`).
+  - macOS/Linux: run the script directly from its folder (`./proj-mod-hist-stats.sh ...`) or add that folder to PATH.
+  - Optional (PowerShell, current session only):
+    ```powershell
+    $env:Path = "C:\path\to\.Net-Project-Modification-History;" + $env:Path
+    ```
+
 ### Windows wrapper (recommended on Windows)
 From the repo root (or pass the repo root explicitly):
 
