@@ -1,0 +1,117 @@
+# Project Modification History Statistics
+
+Analyze per-project directory commit activity in a Git repo and export a CSV summary. Designed for .NET solutions, it discovers directories containing project files and counts commits by year, with optional ignore filters and customizable output.
+
+- Script: `project-modification-history-statistics.py` (cross‑platform)
+- Windows wrapper: `proj-mod-hist-stats.cmd` (PowerShell/cmd friendly)
+- Unix wrapper: `proj-mod-hist-stats.sh` (macOS/Linux)
+
+## What it does
+- Scans the repo for directories that contain any of: `.bproj`, `.csproj`, `.vcxproj`.
+- For each directory, runs a path‑scoped git log to count commits that touched files in that directory only.
+- Aggregates counts for the last N years and an all‑time total.
+- Writes a CSV named `<repo>_<branch>_<sha6>.csv` (names sanitized; sha is the latest commit’s short hash).
+  - If `--project-type` is used and does not include all types, a suffix is appended with the selected types, e.g. `_csproj_vcxproj`.
+
+## Features
+- Accurate per‑directory stats using `git -C <dir> log -- .` (scoped to that folder).
+- Ignore filters: exclude directories by glob‑like patterns relative to the repo root.
+- Verbosity controls: default info logs; `--verbose` for extra details; `--quiet` to suppress info.
+- Deterministic CSV ordering (directories are sorted).
+- No external Python dependencies (stdlib only).
+
+## Requirements
+- Git installed and available on PATH.
+- Python 3.8+.
+- A Git repository (the chosen root must contain a `.git` directory).
+- For the wrapper: Windows (the `.cmd` runner). The Python script itself works on macOS/Linux/Windows.
+
+## Installation
+Optional but recommended on Windows:
+- Place both files in a tools folder (or the repo itself).
+- Optionally create a venv at `.venv` in the same folder; the wrapper will prefer `.venv\Scripts\python.exe`.
+
+No pip installs required.
+
+## Usage
+### Windows wrapper (recommended on Windows)
+From the repo root (or pass the repo root explicitly):
+
+```powershell
+# Use current directory as root
+proj-mod-hist-stats --verbose
+
+# Or pass the repo root explicitly
+proj-mod-hist-stats C:\path\to\repo -y 5 -o C:\out -i "tests/*" -i src/Legacy
+proj-mod-hist-stats --project-type .csproj,.vcxproj --verbose
+```
+
+Notes:
+- If the first token starts with `-` or `/`, the wrapper defaults the root to the current directory.
+- The output filename no longer accepts a custom prefix; it’s always `<repo>_<branch>_<sha6>.csv`.
+- Set `PMH_DEBUG=1` for one run to print the composed command if you need to troubleshoot.
+
+### Direct Python
+### Unix wrapper (macOS/Linux)
+```bash
+# Use current directory as root
+./proj-mod-hist-stats.sh --verbose
+
+# Or pass the repo root explicitly
+./proj-mod-hist-stats.sh /path/to/repo -y 5 -o /tmp/out -i 'tests/*' -i src/Legacy
+./proj-mod-hist-stats.sh --project-type .csproj,.vcxproj --verbose
+```
+
+```powershell
+python project-modification-history-statistics.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples/*" --project-type .csproj,.vcxproj
+```
+
+## Options (Python CLI)
+- `root_directory` (positional): Path to the repo root; must contain `.git`.
+- `-y, --years N`: Number of years to analyze (default: 10).
+- `-o, --output-dir DIR`: Output directory for the CSV (default: script directory).
+- `-i, --ignore PATTERN`: Relative path patterns to ignore (glob‑like). Can be repeated or comma‑separated, e.g. `-i "src/Legacy,tests/*"`.
+- `--project-type`: One or more of `.bproj`, `.csproj`, `.vcxproj`. Repeat or comma‑separate. Default: all. If not all are included, the filename gains a `_type` suffix (e.g., `_csproj_vcxproj`).
+- `--quiet`: Suppress informational logs; warnings and the final summary still print.
+- `--verbose`: Extra details during processing.
+
+Note: `--quiet` and `--verbose` are mutually exclusive.
+
+## Ignore patterns
+- Patterns are evaluated against directory paths relative to the repo root, with `/` as the separator (paths are normalized).
+- Matching uses glob‑style matching and a prefix check. Examples:
+  - `-i "tests/*"` ignores any immediate child under `tests` (e.g., `tests/UnitTestProject`).
+  - `-i packages/*` ignores top‑level children under `packages`.
+  - You can repeat `-i` or use comma‑separated lists: `-i "samples/*,legacy/*" -i docs`.
+
+## Output
+- CSV filename: `<repo>_<branch>_<sha6>.csv`.
+- If `--project-type` is used and not all types are included, the filename gets a suffix with the selected types (e.g., `_csproj_vcxproj`).
+- Columns: `Directory`, `Total`, and one column per analyzed year (e.g., `2025, 2024, ...`).
+- `Directory` is the path relative to the repo root.
+- `Total` is all‑time commits that touched files in that directory; yearly columns are counts within the chosen window.
+
+Example header:
+```
+Directory,Total,2025,2024,2023,2022,2021
+```
+
+## How it works (brief)
+- For each project directory, the script executes:
+  - `git -C <dir> log --pretty=format:%ad --date=short -- .`
+- It extracts commit years, tallies them per directory for the last N years, and computes an all‑time total.
+- The current branch name and short HEAD hash are used to name the CSV.
+
+## Troubleshooting
+- “The specified root directory … does not contain a .git directory”: pass the actual repo root, or run the wrapper from within the repo root.
+- Patterns not matching: ensure you use forward slashes and quote globs in PowerShell, e.g. `-i "tests/*"`.
+- Windows quoting: when using the wrapper from PowerShell, quoting globs (`"packages/*"`) avoids shell expansion.
+- Verify Git is on PATH by running `git --version`.
+
+## Project layout
+- `project-modification-history-statistics.py`: Main CLI tool.
+- `proj-mod-hist-stats.cmd`: Windows convenience wrapper that selects Python (prefers `.venv`), sets default root, and forwards all args.
+
+---
+
+If you have ideas for enhancements (e.g., more project types, additional output formats, or tests), feel free to open an issue or PR once this is on GitHub.
