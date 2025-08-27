@@ -49,9 +49,8 @@ proj-mod-hist-stats --project-type .csproj,.vcxproj --verbose
 Notes:
 - If the first token starts with `-` or `/`, the wrapper defaults the root to the current directory.
 - The output filename no longer accepts a custom prefix; it’s always `<repo>_<branch>_<sha6>.csv`.
-- Set `PMH_DEBUG=1` for one run to print the composed command if you need to troubleshoot.
+- Set `PMH_DEBUG=1` for one run to print the composed command if you need to troubleshoot. This works for both the Windows and Unix wrappers.
 
-### Direct Python
 ### Unix wrapper (macOS/Linux)
 ```bash
 # Use current directory as root
@@ -62,6 +61,11 @@ Notes:
 ./proj-mod-hist-stats.sh --project-type .csproj,.vcxproj --verbose
 ```
 
+Notes:
+- If the first token starts with `-`, the wrapper uses the current directory as the root.
+- `PMH_DEBUG=1` will echo the resolved Python and arguments before running the script.
+
+### Direct Python
 ```powershell
 python project-modification-history-statistics.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples/*" --project-type .csproj,.vcxproj
 ```
@@ -90,6 +94,7 @@ Note: `--quiet` and `--verbose` are mutually exclusive.
 - Columns: `Directory`, `Total`, and one column per analyzed year (e.g., `2025, 2024, ...`).
 - `Directory` is the path relative to the repo root.
 - `Total` is all‑time commits that touched files in that directory; yearly columns are counts within the chosen window.
+- If HEAD is detached, the branch segment in the filename will be `detached`.
 
 Example header:
 ```
@@ -111,6 +116,7 @@ Directory,Total,2025,2024,2023,2022,2021
 ## Project layout
 - `project-modification-history-statistics.py`: Main CLI tool.
 - `proj-mod-hist-stats.cmd`: Windows convenience wrapper that selects Python (prefers `.venv`), sets default root, and forwards all args.
+- `proj-mod-hist-stats.sh`: Unix/macOS wrapper that prefers `.venv/bin/python`, defaults root when the first token is an option, and forwards all args.
 
 ---
 
