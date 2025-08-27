@@ -37,7 +37,7 @@ def validate_year_range(value):
         raise argparse.ArgumentTypeError("Year range must be an integer greater than or equal to 1.")
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Analyze .bproj/.csproj/.vcxproj directory modification history using Git.")
+    parser = argparse.ArgumentParser(description="Analyze .bproj/.csproj/.vcxproj/.xproj directory modification history using Git.")
     parser.add_argument("root_directory", type=validate_root_directory, help="Root directory of the .NET codebase (must contain .git)")
     parser.add_argument("-y", "--years", type=validate_year_range, default=10, help="Number of years to analyze (default: 10)")
     parser.add_argument("-o", "--output-dir", type=str, default=None, help="Directory to write the CSV file (default: script directory)")
@@ -46,7 +46,7 @@ def parse_arguments():
         action="append",
         default=[],
         help=(
-            "Project types to include (choose from: .bproj, .csproj, .vcxproj). "
+            "Project types to include (choose from: .bproj, .csproj, .vcxproj, .xproj). "
             "Can be repeated or comma-separated. Default: all"
         ),
     )
@@ -179,8 +179,8 @@ def write_csv(data: List[dict], years: List[str], root_dir: str, output_dir: str
     branch, sha = get_repo_branch_and_head(root_dir)
     repo_name = os.path.basename(os.path.normpath(root_dir)) or "repo"
     repo_safe = _sanitize_branch_name(repo_name)
-    # Determine optional project-type suffix if not using all types (exactly these three are supported)
-    allowed_all = [".bproj", ".csproj", ".vcxproj"]
+    # Determine optional project-type suffix if not using all supported types
+    allowed_all = [".bproj", ".csproj", ".vcxproj", ".xproj"]
     sel_norm = sorted(selected_exts or [])
     all_norm = sorted(allowed_all)
     suffix = ""
@@ -209,7 +209,7 @@ def main():
     global VERBOSE
     VERBOSE = bool(args.verbose)
     # Resolve project types (only these are allowed)
-    allowed_types = [".bproj", ".csproj", ".vcxproj"]
+    allowed_types = [".bproj", ".csproj", ".vcxproj", ".xproj"]
     def _flatten_types(values: List[str]) -> List[str]:
         items: List[str] = []
         for v in values or []:
@@ -258,7 +258,7 @@ def main():
 
     nprint(f"Using {len(proj_dirs)} project directories after filtering")
     if not proj_dirs:
-        print("No project directories (.bproj/.csproj/.vcxproj) found. Exiting.")
+        print("No project directories (.bproj/.csproj/.vcxproj/.xproj) found. Exiting.")
         return
     data, years = aggregate_modifications(proj_dirs, args.years, args.root_directory)
     out_file = write_csv(data, years, args.root_directory, args.output_dir, list(selected_exts))
