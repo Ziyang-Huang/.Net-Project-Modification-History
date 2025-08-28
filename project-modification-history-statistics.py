@@ -72,14 +72,18 @@ def get_year_window(year_range: int) -> List[str]:
     current_year = datetime.now().year
     return [str(current_year - i) for i in range(year_range)]
 
-def find_project_directories(root_dir: str, exts: Tuple[str, ...]) -> List[str]:
-    proj_dirs = set()
+def find_projects(root_dir: str, exts: Tuple[str, ...]) -> Dict[str, List[str]]:
+    projects = dict()
     for dirpath, _, filenames in os.walk(root_dir):
         for filename in filenames:
-            if filename.lower().endswith(exts):
-                proj_dirs.add(dirpath)
+            _, ext = os.path.splitext(filename.lower())
+            if ext in exts:
+                if dirpath in projects:
+                    projects[dirpath].append(ext)
+                else:
+                    projects[dirpath] = [ext]
                 break
-    return sorted(list(proj_dirs))
+    return projects
 
 def tally_year_counts(years_modified: List[str], years: List[str]) -> Dict[str, int]:
     """Count commits per target year from a list of commit years."""
@@ -100,14 +104,15 @@ def compute_accumulators(year_counts: Dict[str, int], years: List[str], max_k: i
         acc[f"Acc_{k}"] = running
     return acc
 
-def analyze_directory(dir_path: str, years: List[str], root_dir: str, idx: int, total_dirs: int) -> Dict[str, int]:
+def analyze_directory(project: Tuple[str, List[str]], years: List[str], root_dir: str, idx: int, total_dirs: int) -> Dict[str, int]:
     """Analyze a single project directory and return the CSV row dict."""
+    dir_path, exts = project
     nprint(f"[{idx}/{total_dirs}] Analyzing: {dir_path}")
     years_modified = get_git_modification_years(dir_path)
     year_counts = tally_year_counts(years_modified, years)
     total_modifications = len(years_modified)
     rel_dir = os.path.relpath(dir_path, root_dir)
-    row: Dict[str, int] = {"Directory": rel_dir, "Total": total_modifications}  # type: ignore[assignment]
+    row: Dict[str, int] = {"Directory": rel_dir, "ProjectType": ", ".join(exts), "Total": total_modifications}  # type: ignore[assignment]
     # Per-year counts
     for y in years:
         row[y] = year_counts[y]  # type: ignore[index]
@@ -139,12 +144,12 @@ def get_git_modification_years(directory: str) -> List[str]:
         print(f"Warning: git log exception for '{directory}': {exc}", file=sys.stderr)
         return []
 
-def aggregate_modifications(proj_dirs: List[str], year_range: int, root_dir: str) -> Tuple[List[dict], List[str]]:
+def aggregate_modifications(projects: Dict[str, List[str]], year_range: int, root_dir: str) -> Tuple[List[dict], List[str]]:
     years = get_year_window(year_range)
     data: List[dict] = []
-    total_dirs = len(proj_dirs)
-    for idx, d in enumerate(proj_dirs, start=1):
-        row = analyze_directory(d, years, root_dir, idx, total_dirs)
+    total_dirs = len(projects)
+    for idx, project in enumerate(projects.items(), start=1):
+        row = analyze_directory(project, years, root_dir, idx, total_dirs)
         data.append(row)
     return data, years
 
@@ -225,7 +230,7 @@ def determine_output_path(root_dir: str, output_dir: Optional[str], selected_ext
     return os.path.join(out_dir, filename)
 
 def build_headers(years: List[str], acc_max: int = ACC_MAX_YEARS) -> List[str]:
-    return ["Directory", "Total"] + years + [f"Acc_{i}" for i in range(1, acc_max + 1)]
+    return ["Directory", "ProjectType", "Total"] + years + [f"Acc_{i}" for i in range(1, acc_max + 1)]
 
 def write_csv_rows(out_path: str, headers: List[str], data: List[dict]) -> None:
     with open(out_path, "w", newline='', encoding="utf-8") as f:
@@ -276,18 +281,19 @@ def select_project_types(raw_values: List[str]) -> Tuple[Tuple[str, ...], List[s
         selected_exts = tuple(ALLOWED_TYPES)
     return selected_exts, list(selected_exts)
 
-def filter_project_dirs(proj_dirs: List[str], root_dir: str, ignore_patterns: List[str]) -> Tuple[List[str], List[str]]:
+def filter_projects(projects: Dict[str, List[str]], root_dir: str, ignore_patterns: List[str]) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
     if not ignore_patterns:
-        return proj_dirs, []
-    filtered: List[str] = []
-    ignored_list: List[str] = []
-    for d in proj_dirs:
-        rel = os.path.relpath(d, root_dir)
+        return projects, {}
+
+    filtered: Dict[str, List[str]] = {}
+    ignored: Dict[str, List[str]] = {}
+    for proj_dir, exts in projects.items():
+        rel = os.path.relpath(proj_dir, root_dir)
         if _is_ignored(rel, ignore_patterns):
-            ignored_list.append(rel)
+            ignored[rel] = exts
         else:
-            filtered.append(d)
-    return filtered, ignored_list
+            filtered[proj_dir] = exts
+    return filtered, ignored
 
 def main():
     args = parse_arguments()
@@ -300,22 +306,22 @@ def main():
     start_time = datetime.now()
     nprint(f"Starting analysis | root: {args.root_directory} | years: {args.years}")
     nprint(f"Scanning for project directories matching: {', '.join(selected_exts)}...")
-    proj_dirs = find_project_directories(args.root_directory, selected_exts)
-    nprint(f"Found {len(proj_dirs)} project directories before filtering")
+    projects = find_projects(args.root_directory, selected_exts)
+    nprint(f"Found {len(projects)} project directories before filtering")
 
     # Apply ignore filters (relative to root)
     ignore_patterns = _flatten_ignore_args(args.ignore)
-    proj_dirs, ignored_list = filter_project_dirs(proj_dirs, args.root_directory, ignore_patterns)
+    projects, ignored = filter_projects(projects, args.root_directory, ignore_patterns)
     if ignore_patterns and not QUIET:
-        nprint(f"Ignored {len(ignored_list)} directories via patterns: {', '.join(ignore_patterns)}")
-        if VERBOSE and ignored_list:
-            nprint("  -> " + " | ".join(sorted(_normalize_rel(x) for x in ignored_list)))
+        nprint(f"Ignored {len(ignored)} directories via patterns: {', '.join(ignore_patterns)}")
+        if VERBOSE and ignored:
+            nprint("  -> " + " | ".join(sorted(_normalize_rel(x) for x in ignored)))
 
-    nprint(f"Using {len(proj_dirs)} project directories after filtering")
-    if not proj_dirs:
+    nprint(f"Using {len(projects)} project directories after filtering")
+    if not projects:
         print("No project directories (.bproj/.csproj/.vcxproj/.xproj/.sln) found. Exiting.")
         return
-    data, years = aggregate_modifications(proj_dirs, args.years, args.root_directory)
+    data, years = aggregate_modifications(projects, args.years, args.root_directory)
     out_file = write_csv(data, years, args.root_directory, args.output_dir, sel_list)
     elapsed = (datetime.now() - start_time).total_seconds()
     nprint(f"Done in {elapsed:.2f}s")

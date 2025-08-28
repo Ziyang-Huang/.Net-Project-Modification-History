@@ -100,14 +100,14 @@ Note: `--quiet` and `--verbose` are mutually exclusive.
 ## Output
 - CSV filename: `<repo>_<branch>_<sha6>.csv`.
 - If `--project-type` is used and not all types are included, the filename gets a suffix with the selected types (e.g., `_csproj_vcxproj`).
-- Columns: `Directory`, `Total`, one column per analyzed year (e.g., `2025, 2024, ...`), and cumulative columns `Acc_1..Acc_5` (sum of the most recent 1 to 5 years, respectively).
+- Columns: `Directory`, `ProjectType` (comma-separated when multiple), `Total`, one column per analyzed year (e.g., `2025, 2024, ...`), and cumulative columns `Acc_1..Acc_5` (sum of the most recent 1 to 5 years, respectively).
 - `Directory` is the path relative to the repo root.
 - `Total` is all‑time commits that touched files in that directory; yearly columns are counts within the chosen window.
 - If HEAD is detached, the branch segment in the filename will be `detached`.
 
 Example header:
 ```
-Directory,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc_5
+Directory,ProjectType,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc_5
 ```
 
 ## How it works (brief)
