@@ -13,7 +13,7 @@ QUIET = False
 VERBOSE = False
 
 # Supported project types and accumulator configuration
-ALLOWED_TYPES: List[str] = [".bproj", ".csproj", ".vcxproj", ".xproj"]
+ALLOWED_TYPES: List[str] = [".bproj", ".csproj", ".vcxproj", ".xproj", ".sln"]
 ACC_MAX_YEARS = 5
 
 def nprint(*args, **kwargs):
@@ -41,7 +41,7 @@ def validate_year_range(value):
         raise argparse.ArgumentTypeError("Year range must be an integer greater than or equal to 1.")
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Analyze .bproj/.csproj/.vcxproj/.xproj directory modification history using Git.")
+    parser = argparse.ArgumentParser(description="Analyze .bproj/.csproj/.vcxproj/.xproj/.sln directory modification history using Git.")
     parser.add_argument("root_directory", type=validate_root_directory, help="Root directory of the .NET codebase (must contain .git)")
     parser.add_argument("-y", "--years", type=validate_year_range, default=10, help="Number of years to analyze (default: 10)")
     parser.add_argument("-o", "--output-dir", type=str, default=None, help="Directory to write the CSV file (default: script directory)")
@@ -50,7 +50,7 @@ def parse_arguments():
         action="append",
         default=[],
         help=(
-            "Project types to include (choose from: .bproj, .csproj, .vcxproj, .xproj). "
+            "Project types to include (choose from: .bproj, .csproj, .vcxproj, .xproj, .sln). "
             "Can be repeated or comma-separated. Default: all"
         ),
     )
@@ -313,7 +313,7 @@ def main():
 
     nprint(f"Using {len(proj_dirs)} project directories after filtering")
     if not proj_dirs:
-        print("No project directories (.bproj/.csproj/.vcxproj/.xproj) found. Exiting.")
+        print("No project directories (.bproj/.csproj/.vcxproj/.xproj/.sln) found. Exiting.")
         return
     data, years = aggregate_modifications(proj_dirs, args.years, args.root_directory)
     out_file = write_csv(data, years, args.root_directory, args.output_dir, sel_list)
