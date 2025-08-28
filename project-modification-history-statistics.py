@@ -6,11 +6,15 @@ import argparse
 import sys
 import re
 import fnmatch
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Optional
 
 # Global verbosity flag; set in main(); default to verbose output
 QUIET = False
 VERBOSE = False
+
+# Supported project types and accumulator configuration
+ALLOWED_TYPES: List[str] = [".bproj", ".csproj", ".vcxproj", ".xproj"]
+ACC_MAX_YEARS = 5
 
 def nprint(*args, **kwargs):
     if not QUIET:
@@ -63,6 +67,11 @@ def parse_arguments():
     vgroup.add_argument("--verbose", action="store_true", help="Enable verbose logs (additional details during processing)")
     return parser.parse_args()
 
+def get_year_window(year_range: int) -> List[str]:
+    """Return a list of year strings for the last N natural years (current year first)."""
+    current_year = datetime.now().year
+    return [str(current_year - i) for i in range(year_range)]
+
 def find_project_directories(root_dir: str, exts: Tuple[str, ...]) -> List[str]:
     proj_dirs = set()
     for dirpath, _, filenames in os.walk(root_dir):
@@ -71,6 +80,41 @@ def find_project_directories(root_dir: str, exts: Tuple[str, ...]) -> List[str]:
                 proj_dirs.add(dirpath)
                 break
     return sorted(list(proj_dirs))
+
+def tally_year_counts(years_modified: List[str], years: List[str]) -> Dict[str, int]:
+    """Count commits per target year from a list of commit years."""
+    year_counts = {year: 0 for year in years}
+    for y in years_modified:
+        if y in year_counts:
+            year_counts[y] += 1
+    return year_counts
+
+def compute_accumulators(year_counts: Dict[str, int], years: List[str], max_k: int = ACC_MAX_YEARS) -> Dict[str, int]:
+    """Compute cumulative sums for the most recent 1..max_k years based on the provided years order."""
+    vals = [year_counts[y] for y in years]
+    acc: Dict[str, int] = {}
+    running = 0
+    for k in range(1, max_k + 1):
+        if k <= len(vals):
+            running += vals[k - 1]
+        acc[f"Acc_{k}"] = running
+    return acc
+
+def analyze_directory(dir_path: str, years: List[str], root_dir: str, idx: int, total_dirs: int) -> Dict[str, int]:
+    """Analyze a single project directory and return the CSV row dict."""
+    nprint(f"[{idx}/{total_dirs}] Analyzing: {dir_path}")
+    years_modified = get_git_modification_years(dir_path)
+    year_counts = tally_year_counts(years_modified, years)
+    total_modifications = len(years_modified)
+    rel_dir = os.path.relpath(dir_path, root_dir)
+    row: Dict[str, int] = {"Directory": rel_dir, "Total": total_modifications}  # type: ignore[assignment]
+    # Per-year counts
+    for y in years:
+        row[y] = year_counts[y]  # type: ignore[index]
+    # Accumulators
+    row.update(compute_accumulators(year_counts, years))
+    nprint(f"    -> commits(all-time in dir): {total_modifications}; in-range: {sum(year_counts.values())}")
+    return row
 
 def get_git_modification_years(directory: str) -> List[str]:
     """
@@ -96,25 +140,12 @@ def get_git_modification_years(directory: str) -> List[str]:
         return []
 
 def aggregate_modifications(proj_dirs: List[str], year_range: int, root_dir: str) -> Tuple[List[dict], List[str]]:
-    current_year = datetime.now().year
-    years = [str(current_year - i) for i in range(year_range)]
-    data = []
-
+    years = get_year_window(year_range)
+    data: List[dict] = []
     total_dirs = len(proj_dirs)
-    for idx, dir in enumerate(proj_dirs, start=1):
-        nprint(f"[{idx}/{total_dirs}] Analyzing: {dir}")
-        year_counts = {year: 0 for year in years}
-        years_modified = get_git_modification_years(dir)
-        for y in years_modified:
-            if y in year_counts:
-                year_counts[y] += 1
-        total_modifications = len(years_modified)
-        rel_dir = os.path.relpath(dir, root_dir)
-        row = {"Directory": rel_dir, "Total": total_modifications}
-        row.update({year: year_counts[year] for year in years})
+    for idx, d in enumerate(proj_dirs, start=1):
+        row = analyze_directory(d, years, root_dir, idx, total_dirs)
         data.append(row)
-        nprint(f"    -> commits(all-time in dir): {total_modifications}; in-range: {sum(year_counts.values())}")
-
     return data, years
 
 def _normalize_rel(path: str) -> str:
@@ -175,32 +206,88 @@ def get_repo_branch_and_head(root_dir: str) -> Tuple[str, str]:
         print(f"Warning: git query exception at '{root_dir}': {exc}", file=sys.stderr)
         return ("unknown", "unknown")
 
-def write_csv(data: List[dict], years: List[str], root_dir: str, output_dir: str, selected_exts: List[str]) -> str:
+def _build_filename_suffix(selected_exts: List[str]) -> str:
+    sel_norm = sorted(selected_exts or [])
+    all_norm = sorted(ALLOWED_TYPES)
+    if sel_norm and sel_norm != all_norm:
+        tokens = [e.lstrip(".") for e in sel_norm]
+        return "_" + "_".join(tokens)
+    return ""
+
+def determine_output_path(root_dir: str, output_dir: Optional[str], selected_exts: List[str]) -> str:
     branch, sha = get_repo_branch_and_head(root_dir)
     repo_name = os.path.basename(os.path.normpath(root_dir)) or "repo"
     repo_safe = _sanitize_branch_name(repo_name)
-    # Determine optional project-type suffix if not using all supported types
-    allowed_all = [".bproj", ".csproj", ".vcxproj", ".xproj"]
-    sel_norm = sorted(selected_exts or [])
-    all_norm = sorted(allowed_all)
-    suffix = ""
-    if sel_norm and sel_norm != all_norm:
-        # Append normalized tokens without dots, joined by '_'
-        tokens = [e.lstrip(".") for e in sel_norm]
-        suffix = "_" + "_".join(tokens)
+    suffix = _build_filename_suffix(selected_exts)
     filename = f"{repo_safe}_{branch}_{sha}{suffix}.csv"
-    # Resolve output directory
     out_dir = output_dir if output_dir else os.path.dirname(os.path.abspath(__file__))
     os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, filename)
-    headers = ["Directory", "Total"] + years
+    return os.path.join(out_dir, filename)
+
+def build_headers(years: List[str], acc_max: int = ACC_MAX_YEARS) -> List[str]:
+    return ["Directory", "Total"] + years + [f"Acc_{i}" for i in range(1, acc_max + 1)]
+
+def write_csv_rows(out_path: str, headers: List[str], data: List[dict]) -> None:
     with open(out_path, "w", newline='', encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
         for row in data:
             writer.writerow(row)
+
+def write_csv(data: List[dict], years: List[str], root_dir: str, output_dir: str, selected_exts: List[str]) -> str:
+    out_path = determine_output_path(root_dir, output_dir, selected_exts)
+    headers = build_headers(years)
+    write_csv_rows(out_path, headers, data)
     print(f"CSV created: '{out_path}' | rows: {len(data)} | columns: {len(headers)}")
     return out_path
+
+def _flatten_types(values: List[str]) -> List[str]:
+    items: List[str] = []
+    for v in values or []:
+        if not v:
+            continue
+        parts = [p.strip() for p in str(v).split(',') if p.strip()]
+        items.extend(parts)
+    return items
+
+def _normalize_types(types: List[str]) -> List[str]:
+    norm: List[str] = []
+    for t in types:
+        t_low = t.lower()
+        if not t_low.startswith('.'):
+            t_low = '.' + t_low
+        norm.append(t_low)
+    return norm
+
+def _validate_types(types: List[str]) -> Tuple[List[str], List[str]]:
+    invalid = sorted(set(types) - set(ALLOWED_TYPES))
+    valid = sorted(set(types) - set(invalid))
+    return valid, invalid
+
+def select_project_types(raw_values: List[str]) -> Tuple[Tuple[str, ...], List[str]]:
+    raw_types = _flatten_types(raw_values)
+    if raw_types:
+        norm = _normalize_types(raw_types)
+        valid, invalid = _validate_types(norm)
+        if invalid:
+            raise SystemExit(f"Invalid --project-type values: {', '.join(invalid)}. Allowed: {', '.join(ALLOWED_TYPES)}")
+        selected_exts: Tuple[str, ...] = tuple(valid)
+    else:
+        selected_exts = tuple(ALLOWED_TYPES)
+    return selected_exts, list(selected_exts)
+
+def filter_project_dirs(proj_dirs: List[str], root_dir: str, ignore_patterns: List[str]) -> Tuple[List[str], List[str]]:
+    if not ignore_patterns:
+        return proj_dirs, []
+    filtered: List[str] = []
+    ignored_list: List[str] = []
+    for d in proj_dirs:
+        rel = os.path.relpath(d, root_dir)
+        if _is_ignored(rel, ignore_patterns):
+            ignored_list.append(rel)
+        else:
+            filtered.append(d)
+    return filtered, ignored_list
 
 def main():
     args = parse_arguments()
@@ -208,31 +295,8 @@ def main():
     QUIET = bool(args.quiet)
     global VERBOSE
     VERBOSE = bool(args.verbose)
-    # Resolve project types (only these are allowed)
-    allowed_types = [".bproj", ".csproj", ".vcxproj", ".xproj"]
-    def _flatten_types(values: List[str]) -> List[str]:
-        items: List[str] = []
-        for v in values or []:
-            if not v:
-                continue
-            parts = [p.strip() for p in str(v).split(',') if p.strip()]
-            items.extend(parts)
-        return items
-    raw_types = _flatten_types(args.project_type)
-    if raw_types:
-        norm = []
-        for t in raw_types:
-            t_low = t.lower()
-            if not t_low.startswith('.'):
-                t_low = '.' + t_low
-            norm.append(t_low)
-        # validate
-        invalid = sorted(set(norm) - set(allowed_types))
-        if invalid:
-            raise SystemExit(f"Invalid --project-type values: {', '.join(invalid)}. Allowed: {', '.join(allowed_types)}")
-        selected_exts: Tuple[str, ...] = tuple(sorted(set(norm)))
-    else:
-        selected_exts = tuple(allowed_types)
+    # Resolve project types
+    selected_exts, sel_list = select_project_types(args.project_type)
     start_time = datetime.now()
     nprint(f"Starting analysis | root: {args.root_directory} | years: {args.years}")
     nprint(f"Scanning for project directories matching: {', '.join(selected_exts)}...")
@@ -241,27 +305,18 @@ def main():
 
     # Apply ignore filters (relative to root)
     ignore_patterns = _flatten_ignore_args(args.ignore)
-    if ignore_patterns:
-        filtered = []
-        ignored_list = []
-        for d in proj_dirs:
-            rel = os.path.relpath(d, args.root_directory)
-            if _is_ignored(rel, ignore_patterns):
-                ignored_list.append(rel)
-            else:
-                filtered.append(d)
-        if not QUIET:
-            nprint(f"Ignored {len(ignored_list)} directories via patterns: {', '.join(ignore_patterns)}")
-            if VERBOSE and ignored_list:
-                nprint("  -> " + " | ".join(sorted(_normalize_rel(x) for x in ignored_list)))
-        proj_dirs = filtered
+    proj_dirs, ignored_list = filter_project_dirs(proj_dirs, args.root_directory, ignore_patterns)
+    if ignore_patterns and not QUIET:
+        nprint(f"Ignored {len(ignored_list)} directories via patterns: {', '.join(ignore_patterns)}")
+        if VERBOSE and ignored_list:
+            nprint("  -> " + " | ".join(sorted(_normalize_rel(x) for x in ignored_list)))
 
     nprint(f"Using {len(proj_dirs)} project directories after filtering")
     if not proj_dirs:
         print("No project directories (.bproj/.csproj/.vcxproj/.xproj) found. Exiting.")
         return
     data, years = aggregate_modifications(proj_dirs, args.years, args.root_directory)
-    out_file = write_csv(data, years, args.root_directory, args.output_dir, list(selected_exts))
+    out_file = write_csv(data, years, args.root_directory, args.output_dir, sel_list)
     elapsed = (datetime.now() - start_time).total_seconds()
     nprint(f"Done in {elapsed:.2f}s")
 
