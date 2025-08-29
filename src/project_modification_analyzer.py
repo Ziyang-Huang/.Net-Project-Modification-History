@@ -41,7 +41,7 @@ class ProjectModificationAnalyzer:
             exts = self._find_extensions(filenames)
             if exts:
                 projects.append(Project(self.root, dirpath, exts, self.years))
-        return projects
+        return sorted(projects)
 
     def _is_ignored(self, project: Project) -> bool:
         if not self.ignore_patterns:

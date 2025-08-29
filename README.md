@@ -124,6 +124,7 @@ Directory,ProjectType,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc
 
 ## Project layout
 - `src/main.py`: Main CLI tool.
+- `src/project_modification_analyzer.py`: Orchestrates scanning/filtering, builds headers, and writes CSV.
 - `src/project.py`: Core analysis logic for scanning and tallying per-directory commits.
 - `src/tools.py`: Helpers (logging, path normalization).
 - `proj-mod-hist-stats.cmd`: Windows convenience wrapper that selects Python (prefers `.venv`), sets default root, and forwards all args (calls the script under `src/`).
