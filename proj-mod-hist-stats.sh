@@ -77,7 +77,7 @@ if [[ "${PMH_DEBUG-}" == "1" ]]; then
 fi
 
 # Call Python with original args preserved
-"$PY" "$SCRIPT_DIR/project-modification-history-statistics.py" "$ROOT" "$@"
+"$PY" "$SCRIPT_DIR/src/project-modification-history-statistics.py" "$ROOT" "$@"
 EXITCODE=$?
 if [[ $EXITCODE -ne 0 ]]; then
   echo "Script exited with code $EXITCODE."

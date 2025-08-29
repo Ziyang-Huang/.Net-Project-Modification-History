@@ -51,7 +51,7 @@ if /I "%PMH_DEBUG%"=="1" (
 )
 
 REM Call Python with original args preserved; avoid delayed expansion side-effects
-"%PY%" "%SCRIPT_DIR%project-modification-history-statistics.py" "%ROOT%" %*
+"%PY%" "%SCRIPT_DIR%src\project-modification-history-statistics.py" "%ROOT%" %*
 set "EXITCODE=%ERRORLEVEL%"
 if not "%EXITCODE%"=="0" (
   echo Script exited with code %EXITCODE%.

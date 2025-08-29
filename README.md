@@ -2,7 +2,7 @@
 
 Analyze per-project directory commit activity in a Git repo and export a CSV summary. Designed for .NET solutions, it discovers directories containing project files and counts commits by year, with optional ignore filters and customizable output.
 
-- Script: `project-modification-history-statistics.py` (cross‑platform)
+- Script: `src/project-modification-history-statistics.py` (cross‑platform)
 - Windows wrapper: `proj-mod-hist-stats.cmd` (PowerShell/cmd friendly)
 - Unix wrapper: `proj-mod-hist-stats.sh` (macOS/Linux)
 
@@ -76,7 +76,7 @@ Notes:
 
 ### Direct Python
 ```powershell
-python project-modification-history-statistics.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples/*" --project-type .csproj,.vcxproj
+python src/project-modification-history-statistics.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples/*" --project-type .csproj,.vcxproj
 ```
 
 ## Options (Python CLI)
@@ -123,9 +123,11 @@ Directory,ProjectType,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc
 - Verify Git is on PATH by running `git --version`.
 
 ## Project layout
-- `project-modification-history-statistics.py`: Main CLI tool.
-- `proj-mod-hist-stats.cmd`: Windows convenience wrapper that selects Python (prefers `.venv`), sets default root, and forwards all args.
-- `proj-mod-hist-stats.sh`: Unix/macOS wrapper that prefers `.venv/bin/python`, defaults root when the first token is an option, and forwards all args.
+- `src/project-modification-history-statistics.py`: Main CLI tool.
+- `src/project.py`: Core analysis logic for scanning and tallying per-directory commits.
+- `src/tools.py`: Helpers (logging, path normalization).
+- `proj-mod-hist-stats.cmd`: Windows convenience wrapper that selects Python (prefers `.venv`), sets default root, and forwards all args (calls the script under `src/`).
+- `proj-mod-hist-stats.sh`: Unix/macOS wrapper that prefers `.venv/bin/python`, defaults root when the first token is an option, and forwards all args (calls the script under `src/`).
 
 ---
 
