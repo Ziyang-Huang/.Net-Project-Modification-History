@@ -101,6 +101,8 @@ Note: `--quiet` and `--verbose` are mutually exclusive.
 ## Output
 - CSV filename: `<repo>_<branch>_<sha6>.csv`.
 - If `--project-type` is used and not all types are included, the filename gets a suffix with the selected types (e.g., `_csproj_vcxproj`).
+- If the initial write fails due to permissions or the file being locked, the tool will retry with a timestamp-suffixed filename, e.g. `<repo>_<branch>_<sha6>_YYYYMMDD_HHMMSS.csv`.
+- After writing, the tool prints the CSV path along with the number of rows and columns.
 - Columns: `Directory`, `ProjectType` (comma-separated when multiple), `Total`, one column per analyzed year (e.g., `2025, 2024, ...`), and cumulative columns `Acc_1..Acc_5` (sum of the most recent 1 to 5 years, respectively).
 - `Directory` is the path relative to the repo root.
 - `Total` is all‑time commits that touched files in that directory; yearly columns are counts within the chosen window.
@@ -122,6 +124,7 @@ Directory,ProjectType,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc
 - Patterns not matching: ensure you use forward slashes and quote globs in PowerShell, e.g. `-i "tests/*"`.
 - Windows quoting: when using the wrapper from PowerShell, quoting globs (`"packages/*"`) avoids shell expansion.
 - Verify Git is on PATH by running `git --version`.
+- Permission denied or locked file: the tool will automatically retry with a timestamped filename. If it still fails, choose a different output folder via `-o/--output-dir` and ensure you have write permissions.
 
 ## Project layout
 - `src/main.py`: Main CLI tool.

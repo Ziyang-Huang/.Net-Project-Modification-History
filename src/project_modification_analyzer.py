@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import sys
+from datetime import datetime
 from typing import List, Set, Tuple
 
 from project import Project
@@ -127,27 +128,38 @@ class ProjectModificationAnalyzer:
         return ["Directory", "ProjectType", "Total"] + years + [f"Acc_{i}" for i in range(1, acc_max + 1)]
 
     def _write_csv_rows(self, out_path: str, headers: List[str], data: List[dict]) -> None:
-        try:
-            with open(out_path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=headers)
-                writer.writeheader()
-                for row in data:
-                    writer.writerow(row)
-        except PermissionError:
-            name, ext = os.path.splitext(os.path.basename(out_path))
-            newname = f"{name}_new"
-            out_path = os.path.join(os.path.dirname(out_path), f"{newname}{ext}")
-            self._write_csv_rows(out_path, headers, data)
-        except Exception as e:
-            print(f"Error: {e}", file=sys.stderr)
+        with open(out_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=headers)
+            writer.writeheader()
+            for row in data:
+                writer.writerow(row)
+
+    def _print_csv_stats(self, path: str, row: int, col: int) -> None:
+        print(f"CSV created: '{path}'")
+        print(f"    rows: {row}")
+        print(f"    columns: {col}")
+
+    def _add_timestamp(self, filename: str) -> str:
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        name, ext = os.path.splitext(filename)
+        return f"{name}_{ts}{ext}"
 
     def _write_csv(self, data: List[dict], output_dir: str) -> None:
         out_path = self._determine_output_path(output_dir)
         headers = self._build_headers(self.years, min(Project.ACC_MAX_YEARS, len(self.years)))
-        self._write_csv_rows(out_path, headers, data)
-        print(f"CSV created: '{out_path}'")
-        print(f"    rows: {len(data)}")
-        print(f"    columns: {len(headers)}")
+        try:
+            self._write_csv_rows(out_path, headers, data)
+            self._print_csv_stats(out_path, len(data), len(headers))
+        except PermissionError:
+            print(f"PermissionError: Unable to write to '{out_path}'. Trying a new filename with timestamp...")
+            try:
+                out_path = self._add_timestamp(out_path)
+                self._write_csv_rows(out_path, headers, data)
+                self._print_csv_stats(out_path, len(data), len(headers))
+            except Exception as e:
+                print(f"Error: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
 
     def analyze(self, output_dir: str) -> None:
         self._hello()
