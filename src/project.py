@@ -1,10 +1,9 @@
-import fnmatch
 import os
 import subprocess
 import sys
 from typing import Dict, List, Set
 
-from tools import normalize_rel, nprint
+from tools import normalize_rel, nprint, subprocess_check
 
 
 class Project:
@@ -12,7 +11,7 @@ class Project:
     ALLOWED_TYPES: List[str] = [".bproj", ".csproj", ".vcxproj", ".xproj", ".sln"]
     ACC_MAX_YEARS = 5
 
-    def __init__(self, root: str, proj_dir: str, exts: Set[str], years: List[str], ignore_patterns: List[str]):
+    def __init__(self, root: str, proj_dir: str, exts: Set[str], years: List[str]):
         self.root: str = normalize_rel(root)
         self.dir: str = normalize_rel(proj_dir)
         self.rel_dir: str = os.path.relpath(self.dir, root)
@@ -26,22 +25,8 @@ class Project:
         self.acc_len: int = min(Project.ACC_MAX_YEARS, len(years))
         self.accumulators: Dict[str, int] = {f"Acc_{i}": 0 for i in range(1, self.acc_len + 1)}
 
-        self.is_ignored: bool = self._is_ignored(ignore_patterns)
-
     def __lt__(self, other):
         return self.dir < other.dir
-
-    def _is_ignored(self, ignore_patterns: List[str]) -> bool:
-        if not ignore_patterns:
-            return False
-
-        for pattern in ignore_patterns:
-            # glob match or directory prefix match
-            if fnmatch.fnmatchcase(self.rel_dir, pattern):
-                return True
-            if self.rel_dir == pattern or self.rel_dir.startswith(pattern + "/"):
-                return True
-        return False
 
     def _get_git_modification_dates(self) -> List[str]:
         """
@@ -50,19 +35,16 @@ class Project:
         On failure, prints a warning and returns an empty list.
         """
         try:
-            result = subprocess.run(
-                ["git", "-C", self.dir, "log", "--pretty=format:%ad", "--date=short", "--", "."],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                check=False,
-            )
+            result = subprocess_check(["git", "-C", self.dir, "log", "--pretty=format:%ad", "--date=short", "--", "."])
             if result.returncode != 0:
                 print(f"Warning: git log failed for '{self.dir}': {result.stderr.strip()}", file=sys.stderr)
+
             modification_dates = [date for date in result.stdout.splitlines() if date]
             self.total_modifications = len(modification_dates)
+
             return modification_dates
-        except Exception as exc:
+
+        except (subprocess.SubprocessError, OSError) as exc:
             print(f"Warning: git log exception for '{self.dir}': {exc}", file=sys.stderr)
             return []
 
@@ -92,7 +74,5 @@ class Project:
         }
         row.update(self.year_counts)
         row.update(self.accumulators)
-        nprint(
-            f"    -> commits(all-time in dir): {self.total_modifications}; in-range: {sum(self.year_counts.values())}"
-        )
+        nprint(f"    -> commits(all-time): {self.total_modifications}; in-range: {sum(self.year_counts.values())}")
         return row
