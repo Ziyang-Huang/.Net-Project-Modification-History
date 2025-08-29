@@ -14,7 +14,7 @@ class Project:
     def __init__(self, root: str, proj_dir: str, exts: Set[str], years: List[str]):
         self.root: str = normalize_rel(root)
         self.dir: str = normalize_rel(proj_dir)
-        self.rel_dir: str = os.path.relpath(self.dir, root)
+        self.rel_dir: str = normalize_rel(os.path.relpath(proj_dir, root))
 
         self.extensions: Set[str] = exts
 
@@ -67,9 +67,10 @@ class Project:
         """Analyze a single project directory and return the CSV row dict."""
         modification_dates = self._get_git_modification_dates()
         self._tally_year_counts(modification_dates)
+        self._compute_accumulators()
         row: Dict[str, int] = {  # type: ignore[assignment]
             "Directory": self.rel_dir,
-            "ProjectType": ", ".join(self.extensions),
+            "ProjectType": ", ".join(sorted(self.extensions)),
             "Total": self.total_modifications,
         }
         row.update(self.year_counts)

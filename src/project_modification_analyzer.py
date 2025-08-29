@@ -14,7 +14,7 @@ class ProjectModificationAnalyzer:
     def __init__(self, root: str, years: List[str], selected_exts: Tuple[str, ...], ignore_patterns: List[str]) -> None:
         self.root: str = root
         self.years: List[str] = years
-        self.selected_exts: Tuple[str, ...] = selected_exts
+        self.selected_exts: Set[str] = set(selected_exts)
         self.ignore_patterns: List[str] = ignore_patterns
         self.projects: List[Project] = []
         self.filtered: List[Project] = []
@@ -30,7 +30,8 @@ class ProjectModificationAnalyzer:
     def _find_extensions(self, filenames: List[str]) -> Set[str]:
         exts = set()
         for filename in filenames:
-            _, ext = os.path.splitext(filename.lower())
+            _, ext = os.path.splitext(filename)
+            ext = ext.lower()
             if ext in self.selected_exts:
                 exts.add(ext)
         return exts

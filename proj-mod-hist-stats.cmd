@@ -66,7 +66,7 @@ echo   options   Passed through to main.py
 echo.
 echo Common options:
 echo   -y N            Number of years to analyze ^(default: 10^)
-echo   -o DIR          Output directory for CSV ^(default: script directory^)
+echo   -o DIR          Output directory for CSV ^(default: tool root directory^)
 echo   -i PATTERN      Ignore relative path patterns ^(glob; can repeat or comma-separate^)
 echo   --project-type  Project types to include: .bproj, .csproj, .vcxproj, .xproj, .sln ^(repeat or comma-separated^)
 echo   --quiet ^| --verbose  Quiet or verbose mode ^(mutually exclusive; place last^)

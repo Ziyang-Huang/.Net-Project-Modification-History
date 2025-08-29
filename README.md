@@ -12,6 +12,7 @@ Analyze per-project directory commit activity in a Git repo and export a CSV sum
 - Aggregates counts for the last N years and an all‑time total.
 - Writes a CSV named `<repo>_<branch>_<sha6>.csv` (names sanitized; sha is the latest commit’s short hash).
   - If `--project-type` is used and does not include all types, a suffix is appended with the selected types, e.g. `_csproj_vcxproj`.
+  - By default, the CSV is written to the tool root directory unless you pass `-o/--output-dir`.
 
 ## Features
 - Accurate per‑directory stats using `git -C <dir> log -- .` (scoped to that folder).
@@ -82,7 +83,7 @@ python src/main.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples
 ## Options (Python CLI)
 - `root_directory` (positional): Path to the repo root; must contain `.git`.
 - `-y, --years N`: Number of years to analyze (default: 10).
-- `-o, --output-dir DIR`: Output directory for the CSV (default: script directory). Will be created if it doesn't exist.
+- `-o, --output-dir DIR`: Output directory for the CSV (default: tool root directory). Will be created if it doesn't exist.
 - `-i, --ignore PATTERN`: Relative path patterns to ignore (glob‑like). Can be repeated or comma‑separated, e.g. `-i "src/Legacy,tests/*"`.
 - `--project-type`: One or more of `.bproj`, `.csproj`, `.vcxproj`, `.xproj`, `.sln`. Repeat or comma‑separate. Default: all. If not all are included, the filename gains a `_type` suffix (e.g., `_csproj_vcxproj`).
 - `--quiet`: Suppress informational logs; warnings and the final summary still print.

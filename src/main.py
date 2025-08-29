@@ -55,8 +55,8 @@ def parse_arguments():
         "-o",
         "--output-dir",
         type=_validate_output_directory,
-        default=os.path.dirname(os.path.abspath(__file__)),
-        help="Directory to write the CSV file (default: script directory)",
+        default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        help="Directory to write the CSV file (default: tool root directory)",
     )
     parser.add_argument(
         "--project-type",
