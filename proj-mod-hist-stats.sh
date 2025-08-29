@@ -25,7 +25,7 @@ print_help() {
 Usage: $prog [ROOT_DIR] [options]
 
   ROOT_DIR  Path to the repo root (must contain .git) (default: current directory)
-  options   Passed through to project-modification-history-statistics.py
+  options   Passed through to main.py
 
 Common options:
   -y N            Number of years to analyze (default: 10)
@@ -77,7 +77,7 @@ if [[ "${PMH_DEBUG-}" == "1" ]]; then
 fi
 
 # Call Python with original args preserved
-"$PY" "$SCRIPT_DIR/src/project-modification-history-statistics.py" "$ROOT" "$@"
+"$PY" "$SCRIPT_DIR/src/main.py" "$ROOT" "$@"
 EXITCODE=$?
 if [[ $EXITCODE -ne 0 ]]; then
   echo "Script exited with code $EXITCODE."

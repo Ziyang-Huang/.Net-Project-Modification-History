@@ -51,7 +51,7 @@ if /I "%PMH_DEBUG%"=="1" (
 )
 
 REM Call Python with original args preserved; avoid delayed expansion side-effects
-"%PY%" "%SCRIPT_DIR%src\project-modification-history-statistics.py" "%ROOT%" %*
+"%PY%" "%SCRIPT_DIR%src\main.py" "%ROOT%" %*
 set "EXITCODE=%ERRORLEVEL%"
 if not "%EXITCODE%"=="0" (
   echo Script exited with code %EXITCODE%.
@@ -62,7 +62,7 @@ exit /b %EXITCODE%
 echo Usage: %~n0 [ROOT_DIR] [options]
 echo.
 echo   ROOT_DIR  Path to the repo root ^(must contain .git^) ^(default: current directory^)
-echo   options   Passed through to project-modification-history-statistics.py
+echo   options   Passed through to main.py
 echo.
 echo Common options:
 echo   -y N            Number of years to analyze ^(default: 10^)

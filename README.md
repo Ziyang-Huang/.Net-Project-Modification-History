@@ -2,7 +2,7 @@
 
 Analyze per-project directory commit activity in a Git repo and export a CSV summary. Designed for .NET solutions, it discovers directories containing project files and counts commits by year, with optional ignore filters and customizable output.
 
-- Script: `src/project-modification-history-statistics.py` (cross‑platform)
+- Script: `src/main.py` (cross‑platform)
 - Windows wrapper: `proj-mod-hist-stats.cmd` (PowerShell/cmd friendly)
 - Unix wrapper: `proj-mod-hist-stats.sh` (macOS/Linux)
 
@@ -24,7 +24,7 @@ Analyze per-project directory commit activity in a Git repo and export a CSV sum
 - Git installed and available on PATH.
 - Python 3.8+.
 - A Git repository (the chosen root must contain a `.git` directory).
-- For the wrapper: Windows (the `.cmd` runner). The Python script itself works on macOS/Linux/Windows.
+- Wrappers: Windows (`.cmd`) and macOS/Linux (`.sh`). The Python script itself works on all three OSes.
 
 ## Installation
 Optional but recommended on Windows:
@@ -76,13 +76,13 @@ Notes:
 
 ### Direct Python
 ```powershell
-python src/project-modification-history-statistics.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples/*" --project-type .csproj,.vcxproj
+python src/main.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples/*" --project-type .csproj,.vcxproj
 ```
 
 ## Options (Python CLI)
 - `root_directory` (positional): Path to the repo root; must contain `.git`.
 - `-y, --years N`: Number of years to analyze (default: 10).
-- `-o, --output-dir DIR`: Output directory for the CSV (default: script directory).
+- `-o, --output-dir DIR`: Output directory for the CSV (default: script directory). Will be created if it doesn't exist.
 - `-i, --ignore PATTERN`: Relative path patterns to ignore (glob‑like). Can be repeated or comma‑separated, e.g. `-i "src/Legacy,tests/*"`.
 - `--project-type`: One or more of `.bproj`, `.csproj`, `.vcxproj`, `.xproj`, `.sln`. Repeat or comma‑separate. Default: all. If not all are included, the filename gains a `_type` suffix (e.g., `_csproj_vcxproj`).
 - `--quiet`: Suppress informational logs; warnings and the final summary still print.
@@ -123,7 +123,7 @@ Directory,ProjectType,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc
 - Verify Git is on PATH by running `git --version`.
 
 ## Project layout
-- `src/project-modification-history-statistics.py`: Main CLI tool.
+- `src/main.py`: Main CLI tool.
 - `src/project.py`: Core analysis logic for scanning and tallying per-directory commits.
 - `src/tools.py`: Helpers (logging, path normalization).
 - `proj-mod-hist-stats.cmd`: Windows convenience wrapper that selects Python (prefers `.venv`), sets default root, and forwards all args (calls the script under `src/`).

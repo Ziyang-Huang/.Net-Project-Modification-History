@@ -28,8 +28,10 @@ def _validate_year_range(value: str) -> int:
 
 
 def _validate_output_directory(path: str) -> str:
-    if not os.path.isdir(path):
-        raise argparse.ArgumentTypeError(f"The specified output directory '{path}' does not exist.")
+    if os.path.isfile(path):
+        raise argparse.ArgumentTypeError(
+            f"The specified output directory '{path}' is not a directory or does not exist."
+        )
     return os.path.abspath(path)
 
 
@@ -59,7 +61,7 @@ def parse_arguments():
     parser.add_argument(
         "--project-type",
         action="append",
-        default=[".bproj", ".csproj", ".vcxproj", ".xproj", ".sln"],
+        default=[],
         help=(
             "Project types to include (choose from: .bproj, .csproj, .vcxproj, .xproj, .sln). "
             "Can be repeated or comma-separated. Default: all"

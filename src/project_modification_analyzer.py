@@ -25,7 +25,7 @@ class ProjectModificationAnalyzer:
         nprint(f"    Root: {self.root}")
         nprint(f"    Time Range: past [{len(self.years)}] years")
         nprint(f"    Project Types: {', '.join(self.selected_exts)}")
-        nprint(f"    Ignore Patterns: {', '.join(self.ignore_patterns) if self.ignore_patterns else '(none)'}\n")
+        nprint(f"    Ignore Patterns: {', '.join(self.ignore_patterns) if self.ignore_patterns else '(none)'}")
 
     def _find_extensions(self, filenames: List[str]) -> Set[str]:
         exts = set()
@@ -135,7 +135,9 @@ class ProjectModificationAnalyzer:
         out_path = self._determine_output_path(output_dir)
         headers = self._build_headers(self.years, min(Project.ACC_MAX_YEARS, len(self.years)))
         self._write_csv_rows(out_path, headers, data)
-        print(f"\nCSV created: '{out_path}'\n    rows: {len(data)}\n    columns: {len(headers)}")
+        print(f"CSV created: '{out_path}'")
+        print(f"    rows: {len(data)}")
+        print(f"    columns: {len(headers)}")
 
     def analyze(self, output_dir: str) -> None:
         self._hello()
