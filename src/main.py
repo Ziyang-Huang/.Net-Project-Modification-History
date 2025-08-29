@@ -3,12 +3,13 @@ import os
 from datetime import datetime
 from typing import List, Tuple
 
+import tools as _tools
 from project import Project
 from project_modification_analyzer import ProjectModificationAnalyzer
 from tools import normalize_rel, nprint
 
 
-def _validate_root_directory(path):
+def _validate_root_directory(path: str) -> str:
     if not os.path.isdir(path):
         raise argparse.ArgumentTypeError(f"The specified root directory '{path}' does not exist.")
     if not os.path.isdir(os.path.join(path, ".git")):
@@ -16,7 +17,7 @@ def _validate_root_directory(path):
     return os.path.abspath(path)
 
 
-def _validate_year_range(value):
+def _validate_year_range(value: str) -> int:
     try:
         ivalue = int(value)
         if ivalue < 1:
@@ -26,23 +27,39 @@ def _validate_year_range(value):
         raise argparse.ArgumentTypeError("Year range must be an integer greater than or equal to 1.") from exc
 
 
+def _validate_output_directory(path: str) -> str:
+    if not os.path.isdir(path):
+        raise argparse.ArgumentTypeError(f"The specified output directory '{path}' does not exist.")
+    return os.path.abspath(path)
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Analyze .bproj/.csproj/.vcxproj/.xproj/.sln directory modification history using Git."
     )
     parser.add_argument(
-        "root_directory", type=_validate_root_directory, help="Root directory of the .NET codebase (must contain .git)"
+        "root_directory",
+        type=_validate_root_directory,
+        help="Root directory of the .NET codebase (must contain .git)",
     )
     parser.add_argument(
-        "-y", "--years", type=_validate_year_range, default=10, help="Number of years to analyze (default: 10)"
+        "-y",
+        "--years",
+        type=_validate_year_range,
+        default=10,
+        help="Number of years to analyze (default: 10)",
     )
     parser.add_argument(
-        "-o", "--output-dir", type=str, default=None, help="Directory to write the CSV file (default: script directory)"
+        "-o",
+        "--output-dir",
+        type=_validate_output_directory,
+        default=os.path.dirname(os.path.abspath(__file__)),
+        help="Directory to write the CSV file (default: script directory)",
     )
     parser.add_argument(
         "--project-type",
         action="append",
-        default=[],
+        default=[".bproj", ".csproj", ".vcxproj", ".xproj", ".sln"],
         help=(
             "Project types to include (choose from: .bproj, .csproj, .vcxproj, .xproj, .sln). "
             "Can be repeated or comma-separated. Default: all"
@@ -61,10 +78,14 @@ def parse_arguments():
     # Place verbosity controls at the end and make them mutually exclusive
     vgroup = parser.add_mutually_exclusive_group()
     vgroup.add_argument(
-        "--quiet", action="store_true", help="Suppress informational logs; only output results and warnings"
+        "--quiet",
+        action="store_true",
+        help="Suppress informational logs; only output results and warnings",
     )
     vgroup.add_argument(
-        "--verbose", action="store_true", help="Enable verbose logs (additional details during processing)"
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logs (additional details during processing)",
     )
     return parser.parse_args()
 
@@ -131,20 +152,17 @@ def main():
     start_time = datetime.now()
 
     args = parse_arguments()
-    global QUIET
-    QUIET = bool(args.quiet)
-    global VERBOSE
-    VERBOSE = bool(args.verbose)
+    # Set verbosity flags on the shared tools module
+    _tools.QUIET = bool(args.quiet)
+    _tools.VERBOSE = bool(args.verbose)
 
     # Resolve project types
-    root = os.path.abspath(args.root_directory)
     selected_exts = select_project_types(args.project_type)
     years = get_year_window(args.years)
     ignore_patterns = flatten_ignore_args(args.ignore)
-    output_dir = os.path.abspath(args.output_dir)
 
-    analyzer = ProjectModificationAnalyzer(root, years, selected_exts, ignore_patterns)
-    analyzer.analyze(output_dir)
+    analyzer = ProjectModificationAnalyzer(args.root_directory, years, selected_exts, ignore_patterns)
+    analyzer.analyze(args.output_dir)
 
     elapsed = (datetime.now() - start_time).total_seconds()
     nprint(f"Done in {elapsed:.2f}s")

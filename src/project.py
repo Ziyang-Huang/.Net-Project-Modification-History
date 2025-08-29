@@ -1,15 +1,15 @@
 import os
 import subprocess
 import sys
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Tuple
 
 from tools import normalize_rel, nprint, subprocess_check
 
 
 class Project:
     # Supported project types and accumulator configuration
-    ALLOWED_TYPES: List[str] = [".bproj", ".csproj", ".vcxproj", ".xproj", ".sln"]
-    ACC_MAX_YEARS = 5
+    ALLOWED_TYPES: Tuple[str, ...] = (".bproj", ".csproj", ".vcxproj", ".xproj", ".sln")
+    ACC_MAX_YEARS: int = 5
 
     def __init__(self, root: str, proj_dir: str, exts: Set[str], years: List[str]):
         self.root: str = normalize_rel(root)

@@ -4,7 +4,7 @@ import os
 import re
 import subprocess
 import sys
-from typing import List, Optional, Set, Tuple
+from typing import List, Set, Tuple
 
 from project import Project
 from tools import normalize_rel, nprint, subprocess_check, vprint
@@ -23,7 +23,7 @@ class ProjectModificationAnalyzer:
     def _hello(self) -> None:
         nprint("Starting analysis")
         nprint(f"    Root: {self.root}")
-        nprint(f"    Time Range: past [{self.years}] years")
+        nprint(f"    Time Range: past [{len(self.years)}] years")
         nprint(f"    Project Types: {', '.join(self.selected_exts)}")
         nprint(f"    Ignore Patterns: {', '.join(self.ignore_patterns) if self.ignore_patterns else '(none)'}\n")
 
@@ -112,15 +112,14 @@ class ProjectModificationAnalyzer:
             return "_" + "_".join(tokens)
         return ""
 
-    def _determine_output_path(self, output_dir: Optional[str]) -> str:
+    def _determine_output_path(self, output_dir: str) -> str:
         branch, sha = self._get_repo_branch_and_head()
         repo_name = os.path.basename(os.path.normpath(self.root)) or "repo"
         repo_safe = self._sanitize_branch_name(repo_name)
         suffix = self._build_filename_suffix()
         filename = f"{repo_safe}_{branch}_{sha}{suffix}.csv"
-        out_dir = output_dir if output_dir else os.path.dirname(os.path.abspath(__file__))
-        os.makedirs(out_dir, exist_ok=True)
-        return os.path.join(out_dir, filename)
+        os.makedirs(output_dir, exist_ok=True)
+        return os.path.join(output_dir, filename)
 
     def _build_headers(self, years: List[str], acc_max: int = Project.ACC_MAX_YEARS) -> List[str]:
         return ["Directory", "ProjectType", "Total"] + years + [f"Acc_{i}" for i in range(1, acc_max + 1)]
