@@ -7,7 +7,7 @@ Analyze per-project directory commit activity in a Git repo and export a CSV sum
 - Unix wrapper: `proj-mod-hist-stats.sh` (macOS/Linux)
 
 ## What it does
-- Scans the repo for directories that contain any of: `.bproj`, `.csproj`, `.vcxproj`, `.xproj`, `.sln`.
+- Scans the repo for directories that contain any of: `.bproj`, `.csproj`, `.vcproj`, `.vcxproj`, `.xproj`, `.sln`.
 - For each directory, runs a path‑scoped git log to count commits that touched files in that directory only.
 - Aggregates counts for the last N years and an all‑time total.
 - Writes a CSV named `<repo>_<branch>_<sha6>.csv` (names sanitized; sha is the latest commit’s short hash).
@@ -85,7 +85,7 @@ python src/main.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples
 - `-y, --years N`: Number of years to analyze (default: 10).
 - `-o, --output-dir DIR`: Output directory for the CSV (default: tool root directory). Will be created if it doesn't exist.
 - `-i, --ignore PATTERN`: Relative path patterns to ignore (glob‑like). Can be repeated or comma‑separated, e.g. `-i "src/Legacy,tests/*"`.
-- `--project-type`: One or more of `.bproj`, `.csproj`, `.vcxproj`, `.xproj`, `.sln`. Repeat or comma‑separate. Default: all. If not all are included, the filename gains a `_type` suffix (e.g., `_csproj_vcxproj`).
+- `--project-type`: One or more of `.bproj`, `.csproj`, `.vcproj`, `.vcxproj`, `.xproj`, `.sln`. Repeat or comma‑separate. Default: all. If not all are included, the filename gains a `_type` suffix (e.g., `_csproj_vcxproj`).
 - `--quiet`: Suppress informational logs; warnings and the final summary still print.
 - `--verbose`: Extra details during processing.
 

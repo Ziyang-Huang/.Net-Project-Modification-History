@@ -169,7 +169,7 @@ class ProjectModificationAnalyzer:
 
         self.filtered, self.ignored = self._filter_projects()
         if not self.filtered:
-            print("No project directories (.bproj/.csproj/.vcxproj/.xproj/.sln) found. Exiting...")
+            print("No project directories (.bproj/.csproj/.vcproj/.vcxproj/.xproj/.sln) found. Exiting...")
             return
 
         if self.ignored:
