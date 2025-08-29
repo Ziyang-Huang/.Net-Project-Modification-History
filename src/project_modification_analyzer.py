@@ -26,6 +26,7 @@ class ProjectModificationAnalyzer:
         nprint(f"    Time Range: past [{len(self.years)}] years")
         nprint(f"    Project Types: {', '.join(self.selected_exts)}")
         nprint(f"    Ignore Patterns: {', '.join(self.ignore_patterns) if self.ignore_patterns else '(none)'}")
+        nprint(f"Searching for project files...")
 
     def _find_extensions(self, filenames: List[str]) -> Set[str]:
         exts = set()
@@ -126,11 +127,19 @@ class ProjectModificationAnalyzer:
         return ["Directory", "ProjectType", "Total"] + years + [f"Acc_{i}" for i in range(1, acc_max + 1)]
 
     def _write_csv_rows(self, out_path: str, headers: List[str], data: List[dict]) -> None:
-        with open(out_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=headers)
-            writer.writeheader()
-            for row in data:
-                writer.writerow(row)
+        try:
+            with open(out_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=headers)
+                writer.writeheader()
+                for row in data:
+                    writer.writerow(row)
+        except PermissionError:
+            name, ext = os.path.splitext(os.path.basename(out_path))
+            newname = f"{name}_new"
+            out_path = os.path.join(os.path.dirname(out_path), f"{newname}{ext}")
+            self._write_csv_rows(out_path, headers, data)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
 
     def _write_csv(self, data: List[dict], output_dir: str) -> None:
         out_path = self._determine_output_path(output_dir)
