@@ -1,11 +1,10 @@
-import os
-import sys
-import subprocess
 import fnmatch
-
+import os
+import subprocess
+import sys
 from typing import Dict, List, Set
 
-from tools import nprint, normalize_rel
+from tools import normalize_rel, nprint
 
 
 class Project:
@@ -13,10 +12,10 @@ class Project:
     ALLOWED_TYPES: List[str] = [".bproj", ".csproj", ".vcxproj", ".xproj", ".sln"]
     ACC_MAX_YEARS = 5
 
-    def __init__(self, root: str, dir: str, exts: Set[str], years: List[str], ignore_patterns: List[str]):
+    def __init__(self, root: str, proj_dir: str, exts: Set[str], years: List[str], ignore_patterns: List[str]):
         self.root: str = normalize_rel(root)
-        self.dir: str = normalize_rel(dir)
-        self.rel_dir: str = os.path.relpath(dir, root)
+        self.dir: str = normalize_rel(proj_dir)
+        self.rel_dir: str = os.path.relpath(self.dir, root)
 
         self.extensions: Set[str] = exts
 
@@ -24,7 +23,8 @@ class Project:
         self.modification_dates: List[str] = []
         self.year_counts: Dict[str, int] = {year: 0 for year in years}
 
-        self.accumulators: Dict[str, int] = {f"Acc_{i}": 0 for i in range(1, min(Project.ACC_MAX_YEARS, len(years)) + 1)}
+        self.acc_len: int = min(Project.ACC_MAX_YEARS, len(years))
+        self.accumulators: Dict[str, int] = {f"Acc_{i}": 0 for i in range(1, self.acc_len + 1)}
 
         self.is_ignored: bool = self._is_ignored(ignore_patterns)
 
@@ -39,7 +39,7 @@ class Project:
             # glob match or directory prefix match
             if fnmatch.fnmatchcase(self.rel_dir, pattern):
                 return True
-            if self.rel_dir == pattern or self.rel_dir.startswith(pattern + '/'):
+            if self.rel_dir == pattern or self.rel_dir.startswith(pattern + "/"):
                 return True
         return False
 
@@ -55,6 +55,7 @@ class Project:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                check=False,
             )
             if result.returncode != 0:
                 print(f"Warning: git log failed for '{self.dir}': {result.stderr.strip()}", file=sys.stderr)
@@ -72,7 +73,7 @@ class Project:
             if y in self.year_counts:
                 self.year_counts[y] += 1
 
-    def _compute_accumulators(self) -> Dict[str, int]:
+    def _compute_accumulators(self) -> None:
         """Compute cumulative sums for the most recent 1..max_k years based on the provided years order."""
         vals = [self.year_counts[y] for y in self.year_counts]
         running = 0
@@ -84,8 +85,14 @@ class Project:
         """Analyze a single project directory and return the CSV row dict."""
         modification_dates = self._get_git_modification_dates()
         self._tally_year_counts(modification_dates)
-        row: Dict[str, int] = {"Directory": self.rel_dir, "ProjectType": ", ".join(self.extensions), "Total": self.total_modifications}  # type: ignore[assignment]
+        row: Dict[str, int] = {  # type: ignore[assignment]
+            "Directory": self.rel_dir,
+            "ProjectType": ", ".join(self.extensions),
+            "Total": self.total_modifications,
+        }
         row.update(self.year_counts)
         row.update(self.accumulators)
-        nprint(f"    -> commits(all-time in dir): {self.total_modifications}; in-range: {sum(self.year_counts.values())}")
+        nprint(
+            f"    -> commits(all-time in dir): {self.total_modifications}; in-range: {sum(self.year_counts.values())}"
+        )
         return row
