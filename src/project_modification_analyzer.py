@@ -27,7 +27,7 @@ class ProjectModificationAnalyzer:
         nprint(f"    Time Range: past [{len(self.years)}] years")
         nprint(f"    Project Types: {', '.join(self.selected_exts)}")
         nprint(f"    Ignore Patterns: {', '.join(self.ignore_patterns) if self.ignore_patterns else '(none)'}")
-        nprint(f"Searching for project files...")
+        nprint("Searching for project files...")
 
     def _find_extensions(self, filenames: List[str]) -> Set[str]:
         exts = set()
@@ -156,9 +156,9 @@ class ProjectModificationAnalyzer:
                 out_path = self._add_timestamp(out_path)
                 self._write_csv_rows(out_path, headers, data)
                 self._print_csv_stats(out_path, len(data), len(headers))
-            except Exception as e:
+            except (OSError, csv.Error, UnicodeError) as e:
                 print(f"Error: {e}", file=sys.stderr)
-        except Exception as e:
+        except (OSError, csv.Error, UnicodeError) as e:
             print(f"Error: {e}", file=sys.stderr)
 
     def analyze(self, output_dir: str) -> None:
