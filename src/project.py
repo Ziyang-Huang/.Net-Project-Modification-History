@@ -11,12 +11,12 @@ class Project:
     ALLOWED_TYPES: Tuple[str, ...] = (".bproj", ".csproj", ".vcproj", ".vcxproj", ".xproj", ".sln")
     ACC_MAX_YEARS: int = 5
 
-    def __init__(self, root: str, proj_dir: str, exts: Set[str], years: List[str]):
+    def __init__(self, root: str, proj_dir: str, projectfiles: List[str], years: List[str]):
         self.root: str = normalize_rel(root)
         self.dir: str = normalize_rel(proj_dir)
         self.rel_dir: str = normalize_rel(os.path.relpath(proj_dir, root))
 
-        self.extensions: Set[str] = exts
+        self.projectfiles: List[str] = projectfiles
 
         self.total_modifications: int = 0
         self.modification_dates: List[str] = []
@@ -63,17 +63,25 @@ class Project:
             running += vals[k - 1]
             self.accumulators[f"Acc_{k}"] = running
 
-    def analyze_directory(self) -> Dict[str, int]:
+    def _generate_csv_data(self) -> List[dict]:
+        """Generate CSV row data for each project file in the directory."""
+        rows: List[dict] = []
+        for file in self.projectfiles:
+            row: dict = {
+                "Directory": self.rel_dir,
+                "Projectfile": file,
+                "Total": self.total_modifications,
+            }
+            row.update(self.year_counts)
+            row.update(self.accumulators)
+            rows.append(row)
+        return rows
+
+    def analyze_directory(self) -> List[dict]:
         """Analyze a single project directory and return the CSV row dict."""
         modification_dates = self._get_git_modification_dates()
         self._tally_year_counts(modification_dates)
         self._compute_accumulators()
-        row: Dict[str, int] = {  # type: ignore[assignment]
-            "Directory": self.rel_dir,
-            "ProjectType": ", ".join(sorted(self.extensions)),
-            "Total": self.total_modifications,
-        }
-        row.update(self.year_counts)
-        row.update(self.accumulators)
         nprint(f"    -> commits(all-time): {self.total_modifications}; in-range: {sum(self.year_counts.values())}")
-        return row
+        return self._generate_csv_data()
+

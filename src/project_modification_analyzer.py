@@ -29,21 +29,21 @@ class ProjectModificationAnalyzer:
         nprint(f"    Ignore Patterns: {', '.join(self.ignore_patterns) if self.ignore_patterns else '(none)'}")
         nprint("Searching for project files...")
 
-    def _find_extensions(self, filenames: List[str]) -> Set[str]:
-        exts = set()
+    def _find_projectfiles(self, filenames: List[str]) -> List[str]:
+        projectfiles = []
         for filename in filenames:
             _, ext = os.path.splitext(filename)
             ext = ext.lower()
             if ext in self.selected_exts:
-                exts.add(ext)
-        return exts
+                projectfiles.append(filename)
+        return sorted(projectfiles)
 
     def _find_projects(self) -> List[Project]:
         projects = []
         for dirpath, _, filenames in os.walk(self.root):
-            exts = self._find_extensions(filenames)
-            if exts:
-                projects.append(Project(self.root, dirpath, exts, self.years))
+            projectfiles = self._find_projectfiles(filenames)
+            if projectfiles:
+                projects.append(Project(self.root, dirpath, projectfiles, self.years))
         return sorted(projects)
 
     def _is_ignored(self, project: Project) -> bool:
@@ -73,8 +73,8 @@ class ProjectModificationAnalyzer:
         total_dirs = len(self.filtered)
         for idx, project in enumerate(self.filtered, start=1):
             nprint(f"[{idx}/{total_dirs}] Analyzing: {project.rel_dir}")
-            row = project.analyze_directory()
-            data.append(row)
+            rows = project.analyze_directory()
+            data.extend(rows)
         return data
 
     def _sanitize_branch_name(self, name: str) -> str:
@@ -124,9 +124,6 @@ class ProjectModificationAnalyzer:
         os.makedirs(output_dir, exist_ok=True)
         return os.path.join(output_dir, filename)
 
-    def _build_headers(self, years: List[str], acc_max: int = Project.ACC_MAX_YEARS) -> List[str]:
-        return ["Directory", "ProjectType", "Total"] + years + [f"Acc_{i}" for i in range(1, acc_max + 1)]
-
     def _write_csv_rows(self, out_path: str, headers: List[str], data: List[dict]) -> None:
         with open(out_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=headers)
@@ -146,7 +143,7 @@ class ProjectModificationAnalyzer:
 
     def _write_csv(self, data: List[dict], output_dir: str) -> None:
         out_path = self._determine_output_path(output_dir)
-        headers = self._build_headers(self.years, min(Project.ACC_MAX_YEARS, len(self.years)))
+        headers = list(data[0].keys())
         try:
             self._write_csv_rows(out_path, headers, data)
             self._print_csv_stats(out_path, len(data), len(headers))
