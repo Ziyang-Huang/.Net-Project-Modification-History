@@ -8,7 +8,7 @@ Analyze per-project directory commit activity in a Git repo and export a CSV sum
 
 ## What it does
 - Scans the repo for directories that contain any of: `.bproj`, `.csproj`, `.vcproj`, `.vcxproj`, `.xproj`, `.sln`.
-- For each directory, runs a path‑scoped git log to count commits that touched files in that directory only.
+- For each matching directory, runs a scoped git log (`git -C <dir> log -- .`) to count commits touching files beneath that directory only.
 - Aggregates counts for the last N years and an all‑time total.
 - Writes a CSV named `<repo>_<branch>_<sha6>.csv` (names sanitized; sha is the latest commit’s short hash).
   - If `--project-type` is used and does not include all types, a suffix is appended with the selected types, e.g. `_csproj_vcxproj`.
@@ -16,9 +16,8 @@ Analyze per-project directory commit activity in a Git repo and export a CSV sum
 
 ## Features
 - Accurate per‑directory stats using `git -C <dir> log -- .` (scoped to that folder).
-- Ignore filters: exclude directories by glob‑like patterns relative to the repo root.
+- Ignore filters: exclude directories using simple substring / glob‑like patterns (see Ignore patterns section).
 - Verbosity controls: default info logs; `--verbose` for extra details; `--quiet` to suppress info.
-- Deterministic CSV ordering (directories are sorted).
 - No external Python dependencies (stdlib only).
 
 ## Requirements
@@ -92,25 +91,40 @@ python src/main.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples
 Note: `--quiet` and `--verbose` are mutually exclusive.
 
 ## Ignore patterns
-- Patterns are evaluated against directory paths relative to the repo root, with `/` as the separator (paths are normalized).
-- Matching uses glob‑style matching and a prefix check. Examples:
-  - `-i "tests/*"` ignores any immediate child under `tests` (e.g., `tests/UnitTestProject`).
-  - `-i packages/*` ignores top‑level children under `packages`.
-  - You can repeat `-i` or use comma‑separated lists: `-i "samples/*,legacy/*" -i docs`.
+Current code converts each supplied pattern into a very lightweight regular expression and applies `regex.search()` (NOT an exact full match) against each normalized relative directory path (always forward slashes). This effectively gives you substring matching plus two glob markers:
+
+Basics:
+* `*`  -> matches any characters inside a single path segment (no `/`).
+* `**` -> replaced before `*`; effectively becomes `.*` (can cross `/`).
+* A plain token (e.g. `GitSubmodule`) acts as a substring match anywhere in the path.
+* A trailing slash in the original pattern is preserved to help differentiate whole directory names, but because `search` is used it still matches inside longer paths containing that sequence.
+
+Multiple `-i` flags or comma‑separated values are merged into one list.
+
+Examples:
+* `-i tests/*`      -> any immediate child of a `tests` directory.
+* `-i tests`        -> any path containing `tests` in any segment.
+* `-i *GitSubmodule` -> any path containing `[^/]*GitSubmodule` (segment substring).
+* `-i legacy,docs`  -> two patterns via one argument.
+
+Notes / limitations:
+* Patterns are not anchored; use more specific text if you need stricter control.
+* Character classes like `[a-z]` are not interpreted specially by the translator—treat them as literals unless you extend the code.
+* For precise whole‑path control you would need to modify `_compile_ignore_patterns` to add `^`/`$` and switch back to `match`.
 
 ## Output
 - CSV filename: `<repo>_<branch>_<sha6>.csv`.
 - If `--project-type` is used and not all types are included, the filename gets a suffix with the selected types (e.g., `_csproj_vcxproj`).
 - If the initial write fails due to permissions or the file being locked, the tool will retry with a timestamp-suffixed filename, e.g. `<repo>_<branch>_<sha6>_YYYYMMDD_HHMMSS.csv`.
 - After writing, the tool prints the CSV path along with the number of rows and columns.
-- Columns: `Directory`, `ProjectType` (comma-separated when multiple), `Total`, one column per analyzed year (e.g., `2025, 2024, ...`), and cumulative columns `Acc_1..Acc_5` (sum of the most recent 1 to 5 years, respectively).
-- `Directory` is the path relative to the repo root.
-- `Total` is all‑time commits that touched files in that directory; yearly columns are counts within the chosen window.
+- Columns: `Project`, `Total`, one column per analyzed year (e.g., `2025, 2024, ...`), plus cumulative columns `Acc_1..Acc_5` (sums of the most recent 1..5 years respectively).
+- `Project` = `<relative_directory>/<project_file_name>` for each project file discovered (one row per project file).
+- `Total` is all‑time commits that touched files under that directory; yearly columns are counts within the chosen window; `Acc_n` are cumulative starting from the most recent year.
 - If HEAD is detached, the branch segment in the filename will be `detached`.
 
 Example header:
 ```
-Directory,ProjectType,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc_5
+Project,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc_5
 ```
 
 ## How it works (brief)

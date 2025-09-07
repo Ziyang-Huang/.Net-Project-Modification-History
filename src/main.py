@@ -140,14 +140,13 @@ def get_year_window(year_range: int) -> List[str]:
 
 
 def flatten_ignore_args(ignore_args: List[str]) -> List[str]:
-    patterns: List[str] = []
+    flattened_args: List[str] = []
     for item in ignore_args or []:
         if not item:
             continue
         parts = [p.strip() for p in str(item).split(",") if p.strip()]
-        patterns.extend(parts)
-    # normalize pattern slashes
-    return [normalize_rel(p) for p in patterns]
+        flattened_args.extend(parts)
+    return flattened_args
 
 
 def main():

@@ -1,9 +1,11 @@
 import os
 import subprocess
 import sys
-from typing import Dict, List, Set, Tuple
+import csv
+from datetime import datetime
+from typing import Dict, List, Tuple
 
-from tools import normalize_rel, nprint, subprocess_check
+from tools import normalize_rel, nprint, vprint, subprocess_check
 
 
 class Project:
@@ -15,6 +17,7 @@ class Project:
         self.root: str = normalize_rel(root)
         self.dir: str = normalize_rel(proj_dir)
         self.rel_dir: str = normalize_rel(os.path.relpath(proj_dir, root))
+        vprint(f"  {self.rel_dir}")
 
         self.projectfiles: List[str] = projectfiles
 
@@ -26,7 +29,12 @@ class Project:
         self.accumulators: Dict[str, int] = {f"Acc_{i}": 0 for i in range(1, self.acc_len + 1)}
 
     def __lt__(self, other):
-        return self.dir < other.dir
+        for i in range(self.acc_len, 0, -1):
+            acc_self = self.accumulators.get(f"Acc_{i}", 0)
+            acc_other = other.accumulators.get(f"Acc_{i}", 0)
+            if acc_self != acc_other:
+                return acc_self > acc_other
+        return self.rel_dir < other.rel_dir
 
     def _get_git_modification_dates(self) -> List[str]:
         """
@@ -63,25 +71,46 @@ class Project:
             running += vals[k - 1]
             self.accumulators[f"Acc_{k}"] = running
 
-    def _generate_csv_data(self) -> List[dict]:
-        """Generate CSV row data for each project file in the directory."""
-        rows: List[dict] = []
-        for file in self.projectfiles:
-            row: dict = {
-                "Directory": self.rel_dir,
-                "Projectfile": file,
-                "Total": self.total_modifications,
-            }
-            row.update(self.year_counts)
-            row.update(self.accumulators)
-            rows.append(row)
-        return rows
+    def _write_csv_rows(self, out_path: str, headers: List[str], data: List[dict]) -> None:
+        with open(out_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=headers)
+            writer.writerows(data)
 
-    def analyze_directory(self) -> List[dict]:
+    def analyze_directory(self) -> None:
         """Analyze a single project directory and return the CSV row dict."""
         modification_dates = self._get_git_modification_dates()
         self._tally_year_counts(modification_dates)
         self._compute_accumulators()
         nprint(f"    -> commits(all-time): {self.total_modifications}; in-range: {sum(self.year_counts.values())}")
-        return self._generate_csv_data()
 
+    def generate_csv_data(self) -> Tuple[List[dict], List[str]]:
+        """Generate CSV row data for each project file in the directory."""
+        rows: List[dict] = []
+        for file in self.projectfiles:
+            row: dict = {
+                "Project": normalize_rel(os.path.join(self.rel_dir, file)),
+                "Total": self.total_modifications,
+            }
+            row.update(self.year_counts)
+            row.update(self.accumulators)
+            rows.append(row)
+        return rows, list(rows[0].keys()) if rows else ([], [])
+
+    def write_csv(self, out_path: str, csv_headers: List[str]) -> Tuple[int, int]:
+        rows, headers = self.generate_csv_data()
+        if not rows:
+            print(f"No data available for directory at '{self.rel_dir}'.", file=sys.stderr)
+            return 0, 0
+        if headers != csv_headers:
+            print(f"Error: CSV headers mismatch for directory at '{self.rel_dir}'.", file=sys.stderr)
+            print(f"Global CSV headers: {csv_headers}", file=sys.stderr)
+            print(f"Local CSV headers: {headers}", file=sys.stderr)
+            return 0, 0
+
+        try:
+            self._write_csv_rows(out_path, headers, rows)
+        except (OSError, csv.Error, UnicodeError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 0, 0
+
+        return len(rows), len(headers)
