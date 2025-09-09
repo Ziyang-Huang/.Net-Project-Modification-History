@@ -236,7 +236,7 @@ class ProjectModificationAnalyzer:
 
         return True
 
-    def analyze(self, output_dir: str) -> None:
+    def analyze(self, output_dir: str, write_while_analyze: bool = False) -> None:
         self._hello()
 
         self.projects = self._find_projects()
@@ -253,5 +253,7 @@ class ProjectModificationAnalyzer:
         # 1) Analyze all projects first, then write CSV at once
         # 2) Analyze and write CSV incrementally per project
 
-        # self._analyze_then_write(output_dir)
-        self._write_while_analyzing(output_dir)
+        if write_while_analyze:
+            self._write_while_analyzing(output_dir)
+        else:
+            self._analyze_then_write(output_dir)

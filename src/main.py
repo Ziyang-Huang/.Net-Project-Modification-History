@@ -77,6 +77,11 @@ def parse_arguments():
             "Can be specified multiple times or comma-separated, e.g. 'src/Legacy,tests/*'"
         ),
     )
+    parser.add_argument(
+        "--write-while-analyze",
+        action="store_true",
+        help="Write CSV incrementally while analyzing (default: aggregate all then write once)",
+    )
     # Place verbosity controls at the end and make them mutually exclusive
     vgroup = parser.add_mutually_exclusive_group()
     vgroup.add_argument(
@@ -163,7 +168,7 @@ def main():
     ignore_patterns = flatten_ignore_args(args.ignore)
 
     analyzer = ProjectModificationAnalyzer(args.root_directory, years, selected_exts, ignore_patterns)
-    analyzer.analyze(args.output_dir)
+    analyzer.analyze(args.output_dir, write_while_analyze=args.write_while_analyze)
 
     elapsed = (datetime.now() - start_time).total_seconds()
     nprint(f"Done in {elapsed:.2f}s")

@@ -84,6 +84,7 @@ python src/main.py C:\path\to\repo -y 10 -o C:\out --verbose -i "tests/*,samples
 - `-y, --years N`: Number of years to analyze (default: 10).
 - `-o, --output-dir DIR`: Output directory for the CSV (default: tool root directory). Will be created if it doesn't exist.
 - `-i, --ignore PATTERN`: Relative path patterns to ignore (glob‑like). Can be repeated or comma‑separated, e.g. `-i "src/Legacy,tests/*"`.
+- `--write-while-analyze`: Write CSV rows incrementally as each project directory is processed (default is to aggregate all data first, then write once).
 - `--project-type`: One or more of `.bproj`, `.csproj`, `.vcproj`, `.vcxproj`, `.sln`...(For all supported file types, check [Project.SUPPORTED_TYPES](src/project.py#L12)). Repeat or comma‑separate. Default: all. If not all are included, the filename gains a `_type` suffix (e.g., `_csproj_vcxproj`).
 - `--quiet`: Suppress informational logs; warnings and the final summary still print.
 - `--verbose`: Extra details during processing.
