@@ -31,7 +31,7 @@ Common options:
   -y N            Number of years to analyze (default: 10)
   -o DIR          Output directory for CSV (default: tool root directory)
   -i PATTERN      Ignore relative path patterns (glob; can repeat or comma-separate)
-  --project-type  Project types to include: .bproj, .csproj, .vcproj, .vcxproj, .xproj, .sln (repeat or comma-separated)
+  --project-type  Project types to include: .bproj, .csproj, .dtproj, .scopeproj, .sqlproj, .vcproj, .vcxproj, .xproj, .sln (repeat or comma-separated)
   --quiet | --verbose  Quiet or verbose mode (mutually exclusive; place last)
 
 Notes:

@@ -37,7 +37,7 @@ def _validate_output_directory(path: str) -> str:
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Analyze .bproj/.csproj/.vcproj/.vcxproj/.xproj/.sln directory modification history using Git."
+        description=f"Analyze {'/'.join(Project.ALLOWED_TYPES)} directory modification history using Git."
     )
     parser.add_argument(
         "root_directory",
@@ -63,7 +63,7 @@ def parse_arguments():
         action="append",
         default=[],
         help=(
-            "Project types to include (choose from: .bproj, .csproj, .vcproj, .vcxproj, .xproj, .sln). "
+            f"Project types to include (choose from: {', '.join(Project.ALLOWED_TYPES)}). "
             "Can be repeated or comma-separated. Default: all"
         ),
     )

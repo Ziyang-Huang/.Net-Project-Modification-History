@@ -10,7 +10,7 @@ from tools import normalize_rel, nprint, vprint, subprocess_check
 
 class Project:
     # Supported project types and accumulator configuration
-    ALLOWED_TYPES: Tuple[str, ...] = (".bproj", ".csproj", ".vcproj", ".vcxproj", ".xproj", ".sln")
+    ALLOWED_TYPES: Tuple[str, ...] = (".bproj", ".csproj", ".dtproj", ".scopeproj", ".sqlproj", ".vcproj", ".vcxproj", ".xproj", ".sln")
     ACC_MAX_YEARS: int = 5
 
     def __init__(self, root: str, proj_dir: str, projectfiles: List[str], years: List[str]):
