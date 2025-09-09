@@ -6,7 +6,7 @@ from typing import List, Tuple
 import tools as _tools
 from project import Project
 from project_modification_analyzer import ProjectModificationAnalyzer
-from tools import normalize_rel, nprint
+from tools import nprint
 
 
 def _validate_root_directory(path: str) -> str:
@@ -37,7 +37,7 @@ def _validate_output_directory(path: str) -> str:
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description=f"Analyze {'/'.join(Project.ALLOWED_TYPES)} directory modification history using Git."
+        description=f"Analyze {'/'.join(Project.SUPPORTED_TYPES)} directory modification history using Git."
     )
     parser.add_argument(
         "root_directory",
@@ -63,7 +63,7 @@ def parse_arguments():
         action="append",
         default=[],
         help=(
-            f"Project types to include (choose from: {', '.join(Project.ALLOWED_TYPES)}). "
+            f"Project types to include (choose from: {', '.join(Project.SUPPORTED_TYPES)}). "
             "Can be repeated or comma-separated. Default: all"
         ),
     )
@@ -113,7 +113,7 @@ def _normalize_types(types: List[str]) -> List[str]:
 
 
 def _validate_types(types: List[str]) -> Tuple[List[str], List[str]]:
-    invalid = sorted(set(types) - set(Project.ALLOWED_TYPES))
+    invalid = sorted(set(types) - set(Project.SUPPORTED_TYPES))
     valid = sorted(set(types) - set(invalid))
     return valid, invalid
 
@@ -125,11 +125,11 @@ def select_project_types(raw_values: List[str]) -> Tuple[str, ...]:
         valid, invalid = _validate_types(norm)
         if invalid:
             raise SystemExit(
-                f"Invalid --project-type values: {', '.join(invalid)}. Allowed: {', '.join(Project.ALLOWED_TYPES)}"
+                f"Invalid --project-type values: {', '.join(invalid)}. Allowed: {', '.join(Project.SUPPORTED_TYPES)}"
             )
         selected_exts: Tuple[str, ...] = tuple(valid)
     else:
-        selected_exts = tuple(Project.ALLOWED_TYPES)
+        selected_exts = tuple(Project.SUPPORTED_TYPES)
     return selected_exts
 
 

@@ -2,7 +2,6 @@ import os
 import subprocess
 import sys
 import csv
-from datetime import datetime
 from typing import Dict, List, Tuple
 
 from tools import normalize_rel, nprint, vprint, subprocess_check
@@ -10,7 +9,7 @@ from tools import normalize_rel, nprint, vprint, subprocess_check
 
 class Project:
     # Supported project types and accumulator configuration
-    ALLOWED_TYPES: Tuple[str, ...] = (".bproj", ".csproj", ".dtproj", ".scopeproj", ".sqlproj", ".vcproj", ".vcxproj", ".xproj", ".sln")
+    SUPPORTED_TYPES: Tuple[str, ...] = (".bproj", ".cbproj", ".csproj", ".dtproj", ".fsproj", ".groupproj", ".iscopeproj", ".jsproj", ".nugetproj", ".pbxproj", ".proj", ".pyproj", ".rptproj", ".scopeproj", ".shfbproj", ".sln_bproj", ".smproj", ".sqlproj", ".vbproj", ".vcproj", ".vcxproj", ".vdproj", ".vjsproj", ".xproj", ".sln")
     ACC_MAX_YEARS: int = 5
 
     def __init__(self, root: str, proj_dir: str, projectfiles: List[str], years: List[str]):

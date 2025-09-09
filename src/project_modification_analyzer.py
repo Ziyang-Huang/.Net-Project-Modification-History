@@ -1,5 +1,4 @@
 import csv
-import fnmatch
 import os
 import re
 import subprocess
@@ -123,7 +122,7 @@ class ProjectModificationAnalyzer:
 
     def _build_filename_suffix(self) -> str:
         sel_norm = sorted(self.selected_exts or ())
-        all_norm = sorted(Project.ALLOWED_TYPES)
+        all_norm = sorted(Project.SUPPORTED_TYPES)
         if sel_norm and sel_norm != all_norm:
             tokens = [e.lstrip(".") for e in sel_norm]
             return "_" + "_".join(tokens)
@@ -245,7 +244,7 @@ class ProjectModificationAnalyzer:
 
         self.filtered, self.ignored = self._filter_projects()
         if not self.filtered:
-            print(f"No project directories ({'/'.join(Project.ALLOWED_TYPES)}) found. Exiting...")
+            print(f"No project directories ({'/'.join(Project.SUPPORTED_TYPES)}) found. Exiting...")
             return
 
         nprint(f"Using {len(self.filtered)} project directories after filtering\n")
