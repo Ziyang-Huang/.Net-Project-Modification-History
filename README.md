@@ -118,14 +118,15 @@ Notes / limitations:
 - If `--project-type` is used and not all types are included, the filename gets a suffix with the selected types (e.g., `_csproj_vcxproj`).
 - If the initial write fails due to permissions or the file being locked, the tool will retry with a timestamp-suffixed filename, e.g. `<repo>_<branch>_<sha6>_YYYYMMDD_HHMMSS.csv`.
 - After writing, the tool prints the CSV path along with the number of rows and columns.
-- Columns: `Project`, `Total`, one column per analyzed year (e.g., `2025, 2024, ...`), plus cumulative columns `Acc_1..Acc_5` (sums of the most recent 1..5 years respectively).
+- Columns: `Project`, `Extension`, `Total`, one column per analyzed year (e.g., `2025, 2024, ...`), plus cumulative columns `Acc_1..Acc_5` (sums of the most recent 1..5 years respectively).
 - `Project` = `<relative_directory>/<project_file_name>` for each project file discovered (one row per project file).
+- `Extension` = the file extension of the project file (e.g., `.csproj`, `.vcxproj`, `.sln`).
 - `Total` is all‑time commits that touched files under that directory; yearly columns are counts within the chosen window; `Acc_n` are cumulative starting from the most recent year.
 - If HEAD is detached, the branch segment in the filename will be `detached`.
 
 Example header:
 ```
-Project,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc_5
+Project,Extension,Total,2025,2024,2023,2022,2021,Acc_1,Acc_2,Acc_3,Acc_4,Acc_5
 ```
 
 ## How it works (brief)

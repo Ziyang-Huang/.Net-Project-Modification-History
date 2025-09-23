@@ -26,7 +26,7 @@ class ProjectModificationAnalyzer:
         self.ignored: List[Project] = []
 
     def _build_headers(self, years: List[str], acc_max: int = Project.ACC_MAX_YEARS) -> List[str]:
-        return ["Project", "Total"] + years + [f"Acc_{i}" for i in range(1, acc_max + 1)]
+        return ["Project", "Extension", "Total"] + years + [f"Acc_{i}" for i in range(1, acc_max + 1)]
 
     def _hello(self) -> None:
         nprint("\nStarting analysis")

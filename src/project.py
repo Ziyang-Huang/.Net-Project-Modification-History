@@ -88,6 +88,7 @@ class Project:
         for file in self.projectfiles:
             row: dict = {
                 "Project": normalize_rel(os.path.join(self.rel_dir, file)),
+                "Extension": os.path.splitext(file)[1],
                 "Total": self.total_modifications,
             }
             row.update(self.year_counts)
