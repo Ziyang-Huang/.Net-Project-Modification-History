@@ -80,7 +80,7 @@ class Project:
         modification_dates = self._get_git_modification_dates()
         self._tally_year_counts(modification_dates)
         self._compute_accumulators()
-        nprint(f"    -> commits(all-time): {self.total_modifications}; in-range: {sum(self.year_counts.values())}; in last {self.acc_len} years: {sum(self.accumulators[self.acc_len])}")
+        nprint(f"    -> commits(all-time): {self.total_modifications}; in-range: {sum(self.year_counts.values())}; in last {self.acc_len} years: {sum(self.accumulators.values())}")
 
     def generate_csv_data(self) -> Tuple[List[dict], List[str]]:
         """Generate CSV row data for each project file in the directory."""
